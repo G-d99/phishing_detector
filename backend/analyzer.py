@@ -120,7 +120,7 @@ def analyze_html(html: str) -> Tuple[int, List[str], Dict[str, bool]]:
     evid = []
     flags = {"has_password_form": False, "has_otp": False, "has_download": False}
 
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, "html.parser")
     text = soup.get_text(" ", strip=True)
     lower = text.lower()
 

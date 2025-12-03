@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
+python-multipart
 tldextract
 beautifulsoup4
-lxml
 idna
