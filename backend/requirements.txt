@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+tldextract
+beautifulsoup4
+lxml
+idna
