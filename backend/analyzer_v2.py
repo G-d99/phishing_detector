@@ -74,6 +74,7 @@ DANGEROUS_EXTS = (
     ".msi",
 )
 
+DANGEROUS_EXT_SCORE = 40
 
 # -----------------------------
 # 공통 유틸
@@ -317,48 +318,53 @@ def analyze_email_raw(raw: str) -> Tuple[int, List[str]]:
 # -----------------------------
 
 
+URL_REGEX = r"(https?://[^\s]+)"
+
+
 def analyze_text(msg: str) -> Tuple[int, List[str]]:
     score = 0
     evid: List[str] = []
     lower = msg.lower()
 
-    # OTP / 인증코드 / MFA
-    if re.search(r"otp|인증코드|보안코드|2단계|mfa|one[- ]time password", msg, re.IGNORECASE):
+    # 1) 메시지 내부 URL 자동 추출 → URL 엔진 재사용
+    urls = re.findall(URL_REGEX, msg)
+    for u in urls:
+        s, e = analyze_url(u)
+        score += s
+        evid += e
+
+    # 2) OTP / 인증 / 금융
+    if re.search(r"otp|인증코드|보안코드|2단계|mfa", msg, re.IGNORECASE):
         score += 25
         evid.append("asks_payment_otp")
 
-    # 계정/비밀번호/개인정보/카드/결제
-    if re.search(
-        r"로그인|비밀번호|계정|아이디|카드|결제|개인정보|신분증|계정잠김|본인인증",
-        msg,
-        re.IGNORECASE,
-    ):
+    if re.search(r"로그인|비밀번호|계정|아이디|카드|결제|개인정보|신분증", msg, re.IGNORECASE):
         score += 20
         evid.append("asks_credentials")
 
-    # 송금/이체/암호화폐/결제 요청
-    if re.search(
-        r"송금|이체|bitcoin|비트코인|암호화폐|지불|결제 요청|입금",
-        msg,
-        re.IGNORECASE,
-    ):
+    if re.search(r"송금|이체|bitcoin|비트코인|암호화폐|지불|결제 요청", msg, re.IGNORECASE):
         score += 25
         evid.append("asks_payment_otp")
 
-    # 실행파일/다운로드/설치
-    if re.search(r"\.exe|\.scr|\.js|\.vbs|\.bat|\.ps1|다운로드|설치", lower):
+    # 3) 멀웨어 설치 유도
+    if re.search(r"\.exe|\.scr|\.js|\.vbs|\.bat|\.ps1|다운로드|설치|update|install|setup", lower):
         score += 25
         evid.append("exec_attachment")
 
-    # 압축 + 비밀번호
+    # 4) 압축 + 비밀번호 패턴
     if re.search(r"(zip|압축).*(비밀번호|암호|password|pw)", lower):
         score += 15
         evid.append("zip_password")
 
-    # 긴급/계정정지/법적조치
-    if re.search(r"긴급|지금|즉시|오늘까지|계정잠김|정지|법적조치", msg, re.IGNORECASE):
-        score += 10
+    # 5) 사회공학형 (긴급, 계정 잠김, 법적 조치 등)
+    if re.search(r"긴급|즉시|오늘까지|계정잠김|정지|법적조치|본인확인", msg, re.IGNORECASE):
+        score += 15
         evid.append("ui_changed")
+
+    # 6) 택배 사칭 패턴
+    if re.search(r"배송|세관|통관|택배|우체국|대한통운|배송불가", msg, re.IGNORECASE):
+        score += 20
+        evid.append("asks_credentials")
 
     return score, sorted(set(evid))
 
@@ -550,7 +556,7 @@ def analyze_all(
         score += s
         evid += e
 
-    file_info = None
+        file_info = None
 
     # 파일 분석
     if file_bytes is not None and filename:
@@ -558,9 +564,9 @@ def analyze_all(
         digest = sha256_bytes(file_bytes)
         size = len(file_bytes)
 
-        # 위험 확장자
+        # 위험 확장자: 실행 파일 단독만으로도 최소 "의심" 이상
         if lower_name.endswith(DANGEROUS_EXTS):
-            score += 30
+            score += 45
             evid.append("exec_attachment")
 
         # HTML 파일

@@ -83,10 +83,10 @@ export default function App() {
       <div className="app-shell">
         <header className="app-header">
           <div>
-            <h1>위협 판별 챗봇</h1>
-            <p className="subtitle">URL·이메일·HTML·메시지·파일 기반 보안 triage MVP</p>
+            <h1>피싱 판별 AI</h1>
+            <p className="subtitle">URL·이메일·HTML·메시지·파일 기반 보안</p>
           </div>
-          <span className="tag-mvp">MVP</span>
+          <span className="tag-mvp">규린</span>
         </header>
 
         <main className="app-main">
