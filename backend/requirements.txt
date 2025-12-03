@@ -4,3 +4,7 @@ python-multipart
 tldextract
 beautifulsoup4
 idna
+Pillow
+easyocr
+opencv-python-headless
+#pytesseract
